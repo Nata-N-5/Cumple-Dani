@@ -582,6 +582,44 @@ function arrancarIntro() {
 
 
 // ---------------------------------------------------------------
+// PANTALLA COMPLETA
+//
+// Solo se muestra el botón si el navegador soporta la API. En iPhone no
+// existe (Safari no implementa requestFullscreen en elementos), así que
+// allí el botón ni aparece en vez de quedarse ahí sin hacer nada.
+// ---------------------------------------------------------------
+const btnPantalla = document.getElementById('pantalla');
+
+const pedirCompleta = document.documentElement.requestFullscreen
+    || document.documentElement.webkitRequestFullscreen;
+const salirCompleta = document.exitFullscreen || document.webkitExitFullscreen;
+
+function estaEnCompleta() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+if (pedirCompleta && salirCompleta) {
+    btnPantalla.classList.add('disponible');
+
+    btnPantalla.addEventListener('click', () => {
+        try {
+            const p = estaEnCompleta()
+                ? salirCompleta.call(document)
+                : pedirCompleta.call(document.documentElement);
+            if (p && p.catch) p.catch(() => {});
+        } catch (error) {
+            console.warn('Pantalla completa no disponible:', error);
+        }
+    });
+
+    // el estado puede cambiar sin pasar por el botón (tecla Esc, F11)
+    const sincronizar = () => btnPantalla.classList.toggle('completa', estaEnCompleta());
+    document.addEventListener('fullscreenchange', sincronizar);
+    document.addEventListener('webkitfullscreenchange', sincronizar);
+}
+
+
+// ---------------------------------------------------------------
 // ORIENTACIÓN: en móvil la experiencia se ve en horizontal
 //
 // No se puede forzar la rotación desde una web (screen.orientation.lock
@@ -594,7 +632,6 @@ const btnGiraIgual = document.getElementById('gira-igual');
 
 let introArrancado = false;
 let ignorarVertical = false;   // el usuario decidió seguir en vertical
-let temporizadorSalida = null;
 
 function enVerticalMovil() {
     return !ignorarVertical
@@ -602,19 +639,11 @@ function enVerticalMovil() {
         && window.matchMedia('(orientation: portrait)').matches;
 }
 
+// El botón de "continuar de todos modos" vive dentro del aviso, así que
+// aparece y desaparece con él: está disponible desde el primer momento.
 function revisarOrientacion() {
     const mal = enVerticalMovil();
     avisoGira.classList.toggle('visible', mal);
-
-    // Si el móvil tiene el giro bloqueado nunca podría rotar, así que a los
-    // 5 segundos le ofrecemos seguir igual en vez de dejarlo atascado.
-    if (mal && temporizadorSalida === null) {
-        temporizadorSalida = setTimeout(() => btnGiraIgual.classList.add('visible'), 5000);
-    } else if (!mal && temporizadorSalida !== null) {
-        clearTimeout(temporizadorSalida);
-        temporizadorSalida = null;
-        btnGiraIgual.classList.remove('visible');
-    }
 
     if (!mal && !introArrancado) {
         introArrancado = true;

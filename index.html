@@ -223,6 +223,36 @@
 				50%      { transform: translateX(-50%) scale(1) rotate(1.1deg) translateY(-10px); }
 			}
 
+			/* ---------- BOTÓN DE PANTALLA COMPLETA ---------- */
+			#pantalla {
+				position: fixed;
+				right: 18px;
+				bottom: 18px;
+				z-index: 26;      /* visible en escena, pero por debajo del telón */
+				width: 42px;
+				height: 42px;
+				display: none;    /* solo si el navegador soporta la API */
+				align-items: center;
+				justify-content: center;
+				padding: 0;
+				border: 1px solid rgba(232, 194, 90, 0.45);
+				border-radius: 6px;
+				background: rgba(10, 6, 20, 0.45);
+				backdrop-filter: blur(4px);
+				color: #e8c25a;
+				cursor: pointer;
+				opacity: 0.45;
+				transition: opacity 0.3s ease, box-shadow 0.3s ease;
+			}
+
+			#pantalla.disponible { display: flex; }
+			#pantalla:hover { opacity: 1; box-shadow: 0 0 18px rgba(232, 194, 90, 0.4); }
+
+			#pantalla svg { width: 20px; height: 20px; display: block; }
+			#pantalla .cerrar { display: none; }
+			#pantalla.completa .abrir { display: none; }
+			#pantalla.completa .cerrar { display: block; }
+
 			/* ---------- AVISO DE GIRAR EL MÓVIL ---------- */
 			#gira {
 				position: fixed;
@@ -297,12 +327,10 @@
 				text-decoration: underline;
 				text-underline-offset: 5px;
 				cursor: pointer;
-				opacity: 0;
-				visibility: hidden;
-				transition: opacity 0.8s ease, visibility 0.8s;
+				transition: color 0.3s ease;
 			}
 
-			#gira-igual.visible { opacity: 1; visibility: visible; }
+			#gira-igual:hover { color: #efe4ff; }
 
 			/* ---------- TELÓN DE CIRCO (escena 2 -> escena 1) ---------- */
 			#circo {
@@ -421,6 +449,17 @@
 
 		<canvas id="confeti2"></canvas>
 		<img id="letrero" src="assets/imagenes/felizcumple_Letrero.png" alt="Feliz cumpleaños">
+
+		<button id="pantalla" type="button" title="Pantalla completa" aria-label="Pantalla completa">
+			<svg class="abrir" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+			     stroke-linecap="round" stroke-linejoin="round">
+				<path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>
+			</svg>
+			<svg class="cerrar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+			     stroke-linecap="round" stroke-linejoin="round">
+				<path d="M3 8h3a2 2 0 0 0 2-2V3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M21 16h-3a2 2 0 0 0-2 2v3"/>
+			</svg>
+		</button>
 
 		<div id="gira">
 			<div class="movil"></div>
