@@ -676,6 +676,7 @@ function abrirCarta() {
     if (abierta || !introTerminado) return;
     abierta = true;
     overlay.classList.add('visible');
+    reiniciarZoom();
     sonarHoja();
 
     // tres ráfagas escalonadas para que el confeti no salga todo de golpe
@@ -697,6 +698,7 @@ function cerrarCarta() {
     if (!abierta) return;
     abierta = false;
     overlay.classList.remove('visible');
+    reiniciarZoom();
     sonarHoja();
 
     // la carta se despide y le cede la escena a las gafas VR
@@ -710,11 +712,135 @@ function cerrarCarta() {
     }
 }
 
-overlay.addEventListener('click', cerrarCarta);
+// cerrar solo al tocar FUERA de la carta: encima de ella manda el zoom
+overlay.addEventListener('click', (e) => {
+    if (!marcoCarta.contains(e.target)) cerrarCarta();
+});
 
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') cerrarCarta();
 });
+
+
+// ---------------------------------------------------------------
+// ZOOM DE LA CARTA: tocar para acercar, arrastrar para moverla,
+// y pellizcar o rueda del ratón para ajustar. La carta tiene mucho
+// texto y en un móvil no hay quien la lea a tamaño completo.
+// ---------------------------------------------------------------
+const marcoCarta = overlay.querySelector('.marco');
+const imgCarta = marcoCarta.querySelector('img');
+const textoCarta = overlay.querySelector('p');
+
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 4;
+const ZOOM_TOQUE = 2.4;      // al que salta con un toque simple
+
+let zoom = 1;
+let despX = 0;
+let despY = 0;
+
+const punteros = new Map();
+let inicioPellizco = 0;
+let zoomPellizco = 1;
+let arrastreX = 0, arrastreY = 0;   // última posición, para el desplazamiento
+let origenX = 0, origenY = 0;       // dónde empezó el gesto, para saber si arrastró
+let movido = false;
+
+function aplicarZoom() {
+    // que no se pueda arrastrar la imagen fuera de su propio marco
+    const caja = marcoCarta.getBoundingClientRect();
+    const limX = Math.max((caja.width * zoom - caja.width) / 2, 0);
+    const limY = Math.max((caja.height * zoom - caja.height) / 2, 0);
+
+    despX = Math.min(Math.max(despX, -limX), limX);
+    despY = Math.min(Math.max(despY, -limY), limY);
+
+    imgCarta.style.transform = `translate(${despX}px, ${despY}px) scale(${zoom})`;
+
+    const ampliada = zoom > 1.01;
+    overlay.classList.toggle('ampliada', ampliada);
+    textoCarta.textContent = ampliada
+        ? 'Arrastra para moverla · Toca fuera para cerrar'
+        : 'Toca la carta para acercarla · Toca fuera para cerrar';
+}
+
+function ponerZoom(nuevo) {
+    zoom = Math.min(Math.max(nuevo, ZOOM_MIN), ZOOM_MAX);
+    if (zoom === 1) { despX = 0; despY = 0; }
+    aplicarZoom();
+}
+
+function reiniciarZoom() {
+    punteros.clear();
+    overlay.classList.remove('arrastrando');
+    zoom = 1;
+    despX = 0;
+    despY = 0;
+    aplicarZoom();
+}
+
+imgCarta.addEventListener('pointerdown', (e) => {
+    punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    imgCarta.setPointerCapture(e.pointerId);
+
+    if (punteros.size === 2) {
+        const [a, b] = [...punteros.values()];
+        inicioPellizco = Math.hypot(a.x - b.x, a.y - b.y);
+        zoomPellizco = zoom;
+    } else {
+        arrastreX = origenX = e.clientX;
+        arrastreY = origenY = e.clientY;
+        movido = false;
+        if (zoom > 1) overlay.classList.add('arrastrando');
+    }
+});
+
+imgCarta.addEventListener('pointermove', (e) => {
+    if (!punteros.has(e.pointerId)) return;
+    punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (punteros.size === 2) {
+        const [a, b] = [...punteros.values()];
+        const dist = Math.hypot(a.x - b.x, a.y - b.y);
+        if (inicioPellizco > 0) ponerZoom(zoomPellizco * (dist / inicioPellizco));
+        movido = true;
+        return;
+    }
+
+    // el "arrastró o no" se mide contra el origen del gesto, no contra el
+    // último punto, o siempre daría cero al haberlo actualizado ya
+    if (Math.hypot(e.clientX - origenX, e.clientY - origenY) > 5) movido = true;
+
+    if (zoom > 1) {
+        despX += e.clientX - arrastreX;
+        despY += e.clientY - arrastreY;
+        aplicarZoom();
+    }
+
+    arrastreX = e.clientX;
+    arrastreY = e.clientY;
+});
+
+function soltarPuntero(e) {
+    punteros.delete(e.pointerId);
+    if (punteros.size < 2) inicioPellizco = 0;
+    if (punteros.size === 0) overlay.classList.remove('arrastrando');
+}
+
+imgCarta.addEventListener('pointerup', (e) => {
+    const eraSimple = punteros.size === 1 && !movido;
+    soltarPuntero(e);
+
+    // un toque limpio alterna entre acercar y alejar
+    if (eraSimple) ponerZoom(zoom > 1.01 ? 1 : ZOOM_TOQUE);
+});
+
+imgCarta.addEventListener('pointercancel', soltarPuntero);
+
+imgCarta.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    ponerZoom(zoom * (e.deltaY < 0 ? 1.18 : 1 / 1.18));
+}, { passive: false });
 
 
 // ---------------------------------------------------------------

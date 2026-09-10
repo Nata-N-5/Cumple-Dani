@@ -2,6 +2,8 @@
 <html lang="es">
 	<head>
 		<meta charset="utf-8">
+		<!-- sin esto los móviles maquetan a 980px y lo encogen todo -->
+		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<title>My first three.js app</title>
 		<style>
 			body { margin: 0; overflow: hidden; font-family: Georgia, 'Times New Roman', serif; background: #000; }
@@ -65,9 +67,13 @@
 				visibility: visible;
 			}
 
-			#carta-overlay img {
-				max-width: 80vw;
-				max-height: 72vh;
+			/* El marco lleva la animación de entrada y recorta el desbordamiento;
+			   la imagen de dentro lleva el zoom y el desplazamiento. Separarlos
+			   evita que las dos animaciones se peleen por el mismo transform. */
+			#carta-overlay .marco {
+				max-width: 94vw;
+				max-height: 82vh;
+				overflow: hidden;
 				border-radius: 6px;
 				box-shadow: 0 0 60px rgba(255, 226, 160, 0.45), 0 20px 60px rgba(0, 0, 0, 0.6);
 				transform: scale(0.85) rotate(-2deg);
@@ -75,10 +81,23 @@
 				transition: transform 0.55s cubic-bezier(0.2, 1.1, 0.3, 1), opacity 0.55s ease;
 			}
 
-			#carta-overlay.visible img {
+			#carta-overlay.visible .marco {
 				transform: scale(1) rotate(0deg);
 				opacity: 1;
 			}
+
+			#carta-overlay .marco img {
+				display: block;
+				max-width: 94vw;
+				max-height: 82vh;
+				cursor: zoom-in;
+				touch-action: none;   /* los gestos los manejamos nosotros */
+				transform-origin: center center;
+				transition: transform 0.28s ease;
+			}
+
+			#carta-overlay.ampliada .marco img { cursor: grab; }
+			#carta-overlay.arrastrando .marco img { cursor: grabbing; transition: none; }
 
 			#carta-overlay p {
 				margin: 0;
@@ -434,8 +453,8 @@
 		<div id="intro"><h1>HOLA, DANI</h1></div>
 
 		<div id="carta-overlay">
-			<img src="assets/imagenes/carta.png" alt="Carta">
-			<p>Click para cerrar</p>
+			<div class="marco"><img src="assets/imagenes/carta.png" alt="Carta"></div>
+			<p>Toca la carta para acercarla · Toca fuera para cerrar</p>
 		</div>
 
 		<canvas id="confeti"></canvas>
